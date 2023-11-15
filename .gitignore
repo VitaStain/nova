@@ -17,3 +17,4 @@ celerybeat-schedule
 rabbitmq
 
 docker-compose.override.yml
+credential.json

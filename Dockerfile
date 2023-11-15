@@ -1,15 +1,30 @@
 FROM python:3.10-slim
 
-RUN mkdir /nova
+WORKDIR /usr/src/app
 
-WORKDIR /nova
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
 
-COPY requirements.txt .
+RUN apt-get update -y \
+    && apt-get install -y build-essential libpq-dev # Для postgres auth
 
+
+RUN pip install --upgrade pip
+COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY . .
+RUN mkdir -p /home/app
 
-CMD python manage.py migrate
+ENV HOME=/home/app
+ENV APP_HOME=/home/app/web
+RUN mkdir $APP_HOME
+RUN mkdir $APP_HOME/static
+RUN mkdir $APP_HOME/media
+WORKDIR $APP_HOME
 
-CMD gunicorn -w 2 -t 600 nova.wsgi:application --bind 0.0.0.0:8000
+
+COPY ./entrypoint.sh .
+COPY . $APP_HOME
+
+
+ENTRYPOINT ["/home/app/web/entrypoint.sh"]

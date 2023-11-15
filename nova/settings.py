@@ -38,7 +38,9 @@ ALLOWED_HOSTS = env("ALLOWED_HOSTS").split()
 
 # Application definition
 
-PROJECT_APPS = []
+PROJECT_APPS = [
+    "apps.google_drive",
+]
 
 INSTALLED_LIBS = [
     "drf_spectacular",

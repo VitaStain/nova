@@ -24,7 +24,9 @@ urlpatterns = [
     # API
     path(
         "api/",
-        include([]),
+        include([
+            path("", include("apps.google_drive.urls")),
+        ]),
     ),
     # admin
     path("admin/", admin.site.urls),

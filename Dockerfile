@@ -12,4 +12,4 @@ COPY . .
 
 CMD python manage.py migrate
 
-CMD gunicorn -w 2 -t 600 catena.wsgi:application --bind 0.0.0.0:8000
+CMD gunicorn -w 2 -t 600 nova.wsgi:application --bind 0.0.0.0:8000

@@ -1,0 +1,90 @@
+version: '3.10'
+
+services:
+  web:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: gunicorn -w 2 -t 600 catena.wsgi:application --bind 0.0.0.0:8000
+    ports:
+      - ${WEB_PORT}
+    volumes:
+      - ${WEB_STATIC}:/home/app/web/static/
+      - ${WEB_MEDIA}:/home/app/web/media/
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+  db:
+    image: postgres:14-alpine
+    volumes:
+      - ${DB_PATH}:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${DB_USER} -d ${DB_NAME}'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+  redis:
+    hostname: redis
+    image: redis:alpine
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 3s
+      timeout: 3s
+      retries: 50
+  celery:
+    restart: always
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: celery -A ${PROJECT_NAME} worker -l info
+    volumes:
+      - ${WEB_STATIC}:/home/app/web/static/
+      - ${WEB_MEDIA}:/home/app/web/media/
+    deploy:
+      resources:
+        limits:
+          memory: 1500M
+        reservations:
+          memory: 400M
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
+  celery-beat:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    command: celery -A ${PROJECT_NAME} beat -l info --scheduler django
+    volumes:
+      - ${WEB_STATIC}:/home/app/web/static/
+      - ${WEB_MEDIA}:/home/app/web/media/
+    deploy:
+      resources:
+        limits:
+          memory: 1000M
+        reservations:
+          memory: 400M
+    depends_on:
+      db:
+        condition: service_healthy
+      celery:
+        condition: service_started
+      web:
+        condition: service_started
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
